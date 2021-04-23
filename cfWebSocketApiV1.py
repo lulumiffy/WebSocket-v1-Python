@@ -30,6 +30,9 @@ import websocket
 from time import sleep
 from threading import Thread
 from util.cfLogging import CfLogger
+from market import Market
+
+market = Market()
 
 class CfWebSocketMethods(object):
     """Crypto Facilities Ltd Web Socket API Connector"""
@@ -150,10 +153,10 @@ class CfWebSocketMethods(object):
             self.logger.info("Couldn't connect to", self.base_url, "! Exiting.")
             sys.exit(1)
 
-    def __on_open(self):
+    def __on_open(self, ws):
         self.logger.info("Connected to %s", self.base_url)
 
-    def __on_message(self, message):
+    def __on_message(self, ws, message):
         """Listen the web socket connection. Block until a message
         arrives. """
 
@@ -161,9 +164,12 @@ class CfWebSocketMethods(object):
         self.logger.info(message_json)
 
         if message_json.get("event", "") == "challenge":
-                self.original_challenge = message_json["message"]
-                self.signed_challenge = self.__sign_challenge(self.original_challenge)
-                self.challenge_ready = True
+            self.original_challenge = message_json["message"]
+            self.signed_challenge = self.__sign_challenge(self.original_challenge)
+            self.challenge_ready = True
+        
+        market.process_kraken_funding_msg(message_json)
+
 
     def __on_close(self):
         self.logger.info('Connection closed')
